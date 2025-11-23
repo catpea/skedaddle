@@ -1,6 +1,6 @@
 {
   "name": "skedaddle",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hide secret messages in cat tongue animations using International Morse Code",
   "main": "skedaddle.js",
   "type": "module",
