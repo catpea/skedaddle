@@ -538,11 +538,3 @@ Morse code is humanity's shared heritage.
 Cats are the internet's shared obsession.
 
 Combine them freely. 📡🐱
-
----
-
-*"Three dits, three dahs, three dits - the cat needs food."*
-
-Made with love for catpea.com
-Where pre-AI marvels live forever
-And every frame has **meaning** ✨
