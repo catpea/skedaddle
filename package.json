@@ -1,0 +1,41 @@
+{
+  "name": "skedaddle",
+  "version": "1.0.0",
+  "description": "Hide secret messages in cat tongue animations using International Morse Code",
+  "main": "skedaddle.js",
+  "type": "module",
+  "bin": {
+    "skedaddle": "skedaddle.js"
+  },
+  "scripts": {
+    "save": "git add .; git commit -m 'Updated Release'; npm version patch; npm publish; git push --follow-tags;",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "avif",
+    "animation",
+    "ffmpeg",
+    "image",
+    "video",
+    "cli",
+    "animator",
+    "morse"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/catpea/skedaddle.git"
+  },
+  "bugs": {
+    "url": "https://github.com/catpea/skedaddle/issues"
+  },
+  "homepage": "https://catpea.github.io/skedaddle",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/catpea"
+  }
+}
