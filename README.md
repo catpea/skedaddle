@@ -24,17 +24,18 @@ Temporary war mode: **ACTIVATED** 🎖️
 
 ## What It Does
 
-Takes any text message and encodes it as International Morse Code using two frames:
+Takes any text message and encodes it as International Morse Code using three frames:
 
-- **Frame A** (tongue out) = **Signal** (dit or dah)
-- **Frame B** (normal face) = **Pause** (space)
+- **Dit frame** = Short signal (·)
+- **Dah frame** = Long signal (─)
+- **Pause frame** = Space between signals
 
 The timing follows official morse code standards:
-- **Dit (·)**: Short tongue lick
-- **Dah (─)**: Long tongue lick
-- **Spaces**: Normal kitty face for various durations
+- **Dit (·)**: Short signal (e.g., tongue out briefly)
+- **Dah (─)**: Long signal (e.g., tongue out longer)
+- **Spaces**: Pause frame for element, letter, and word boundaries
 
-Result: A seemingly innocent cat animation that actually transmits a message.
+Result: A seemingly innocent cat animation that actually transmits a message with clear visual separation between signals and pauses.
 
 ## Quick Start
 
@@ -51,6 +52,9 @@ skedaddle --text "SOS"
 # With audio for grandpa
 skedaddle --text "FEED YOUR KITTY" --audio --format mp4
 
+# For learning morse code (slow speed, longer pause before loop)
+skedaddle --text "SOS" --wpm 10 --end-pause 5.0
+
 # Faster transmission (expert level)
 skedaddle --text "THE QUICK BROWN FOX" --wpm 25
 ```
@@ -62,7 +66,7 @@ skedaddle --text "THE QUICK BROWN FOX" --wpm 25
 # Just requires:
 # - Node.js
 # - ffmpeg
-# - Two cat images (a.jpg and b.jpg)
+# - Three cat images (dit.jpg, dah.jpg, and pause.jpg in ./samples, or specify your own)
 ```
 
 ## Usage
@@ -92,8 +96,9 @@ skedaddle \
 ```bash
 skedaddle \
   --text "MEOW MEOW" \
-  --frame-a tongue-out.jpg \
-  --frame-b normal-face.jpg \
+  --dit dit-frame.jpg \
+  --dah dah-frame.jpg \
+  --pause pause-frame.jpg \
   --output custom-morse.avif
 ```
 
@@ -105,8 +110,10 @@ skedaddle \
 - `-f, --format <fmt>` - Format: avif or mp4 (default: avif)
 - `-a, --audio` - Add morse beep audio track
 - `-F, --frequency <hz>` - Beep frequency (default: 800 Hz)
-- `-A, --frame-a <file>` - Tongue out image (default: a.jpg)
-- `-B, --frame-b <file>` - Normal face image (default: b.jpg)
+- `-D, --dit <file>` - Dit image - short signal (default: ./samples/dit.jpg)
+- `-H, --dah <file>` - Dah image - long signal (default: ./samples/dah.jpg)
+- `-P, --pause <file>` - Pause image - space/pause (default: ./samples/pause.jpg)
+- `-E, --end-pause <seconds>` - Pause before loop in seconds (default: 2.0)
 
 ## Morse Code Speed (WPM)
 
@@ -184,6 +191,19 @@ skedaddle --text "OPERATION CATNIP AT 0300" --wpm 15 -o classified.avif
 ```
 
 For when you need to coordinate with other cat operatives.
+
+### Example 6: Learning Morse Code
+```bash
+skedaddle --text "SOS" --wpm 10 --end-pause 5.0 --audio --format mp4
+```
+
+Perfect for learning morse code:
+- Slow speed (10 WPM) gives time to recognize patterns
+- 5-second pause before loop lets you process the message
+- Audio helps reinforce the timing
+- Short message (SOS) is easy to memorize
+
+Young learners can watch the loop and practice decoding before it repeats!
 
 ## The Philosophy
 
@@ -292,18 +312,35 @@ dit = 1.2 / 15 = 0.08 seconds = 80ms
 
 ### Frame Sequencing
 
-The script generates a precise frame sequence:
+The script generates a precise frame sequence using three distinct frames:
 
 ```javascript
+// Short signal
 {
-  frame: 'a.jpg',      // tongue out
-  duration: 0.240,     // dah (long signal)
+  frame: 'dit.jpg',
+  duration: 0.060,
+  type: 'dit',
+  symbol: '·'
+}
+
+// Long signal
+{
+  frame: 'dah.jpg',
+  duration: 0.180,
   type: 'dah',
   symbol: '─'
 }
+
+// Pause/space
+{
+  frame: 'pause.jpg',
+  duration: 0.180,
+  type: 'letter-space',
+  symbol: ' '
+}
 ```
 
-Each frame has **exact** timing down to the millisecond.
+Each frame has **exact** timing down to the millisecond, with clear visual distinction between signals and pauses.
 
 ### Audio Generation
 
@@ -335,10 +372,23 @@ Send to friends who know morse:
 ### 3. Educational Content
 
 Teach morse code by example:
+- Use slow WPM (5-10) for beginners
+- Add 3-5 second end pause so learners can process before loop
 - Show the video
 - Reveal the message
 - Explain the encoding
 - Let people practice decoding
+
+Perfect settings for learning:
+```bash
+skedaddle -t "HELLO" -w 8 -E 4.0 --audio
+```
+
+The end pause gives learners time to:
+- Write down what they decoded
+- Think about the pattern
+- Prepare for the next loop
+- Not feel rushed
 
 ### 4. Art Installations
 
@@ -399,10 +449,10 @@ Encode a message for the future:
 
 ### "Frame not found"
 
-Make sure you have `a.jpg` and `b.jpg` in the directory, or specify custom frames:
+By default, skedaddle looks for `./samples/dit.jpg`, `./samples/dah.jpg`, and `./samples/pause.jpg`. You can specify custom frames:
 
 ```bash
-skedaddle -A tongue.jpg -B normal.jpg -t "HELLO"
+skedaddle -D dit.jpg -H dah.jpg -P pause.jpg -t "HELLO"
 ```
 
 ### "Audio generation failed"
@@ -437,7 +487,7 @@ Morse Kitty asks:
 
 > **"How much meaning can we hide in how little?"**
 
-Two frames.
+Three frames.
 Simple timing.
 International standard from 1848.
 
@@ -450,7 +500,7 @@ No GPU clusters.
 Just:
 - ffmpeg
 - Node.js
-- Two cat pictures
+- Three cat pictures (dit, dah, pause)
 - Mathematical precision
 
 This is **pre-AI generative art** at its purest.

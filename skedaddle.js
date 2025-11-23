@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,22 +12,26 @@ import { fileURLToPath } from 'node:url';
  * In 100 years, a morse code expert will decode your cat video and discover:
  * "I HAS LICKS" or "FEED YOUR KITTY"
  *
- * Frame A (tongue out) = Signal (dit/dah)
- * Frame B (normal) = Space (pause)
+ * Dit frame = Short signal (·)
+ * Dah frame = Long signal (─)
+ * Pause frame = Space between signals
  *
  * Inspired by: After Dark screensavers, Commodore Amiga intros, and cats
  */
 
 class Skedaddle {
   constructor(options = {}) {
-    this.frameA = options.frameA || 'a.jpg'; // Tongue out
-    this.frameB = options.frameB || 'b.jpg'; // Normal
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    this.dit = options.dit || path.join(__dirname, 'samples', 'dit.jpg'); // Short signal (·)
+    this.dah = options.dah || path.join(__dirname, 'samples', 'dah.jpg'); // Long signal (─)
+    this.pause = options.pause || path.join(__dirname, 'samples', 'pause.jpg'); // Space/pause
     this.outputFile = options.output || 'morse.avif';
     this.text = options.text || 'MEOW';
     this.wpm = options.wpm || 15; // Words per minute (standard morse speed)
     this.format = options.format || 'avif'; // avif or mp4
     this.addAudio = options.addAudio || false;
     this.toneFrequency = options.toneFrequency || 800; // Hz
+    this.endPause = options.endPause !== undefined ? options.endPause : 2.0; // Pause before loop (seconds)
 
     // Calculate timing based on WPM
     // Standard: PARIS = 50 units, WPM = (word count * 50) / (time in minutes * 60)
@@ -86,7 +90,7 @@ class Skedaddle {
       if (char === '.') {
         // Dit - short signal (tongue out)
         sequence.push({
-          frame: this.frameA,
+          frame: this.dit,
           duration: this.ditDuration,
           type: 'dit',
           symbol: '·'
@@ -94,9 +98,9 @@ class Skedaddle {
         position += this.ditDuration;
 
       } else if (char === '-') {
-        // Dah - long signal (tongue out)
+        // Dah - long signal
         sequence.push({
-          frame: this.frameA,
+          frame: this.dah,
           duration: this.dahDuration,
           type: 'dah',
           symbol: '─'
@@ -108,7 +112,7 @@ class Skedaddle {
         if (morseChars[i + 1] === ' ') {
           // Word space (already have letter space from previous)
           sequence.push({
-            frame: this.frameB,
+            frame: this.pause,
             duration: this.wordSpace - this.letterSpace,
             type: 'word-space',
             symbol: '   '
@@ -118,7 +122,7 @@ class Skedaddle {
         } else {
           // Letter space
           sequence.push({
-            frame: this.frameB,
+            frame: this.pause,
             duration: this.letterSpace,
             type: 'letter-space',
             symbol: ' '
@@ -132,13 +136,24 @@ class Skedaddle {
       // But not after last element
       if (i < morseChars.length - 1 && morseChars[i + 1] !== ' ') {
         sequence.push({
-          frame: this.frameB,
+          frame: this.pause,
           duration: this.elementSpace,
           type: 'element-space',
           symbol: ''
         });
         position += this.elementSpace;
       }
+    }
+
+    // Add end pause before loop (helps learners distinguish message boundaries)
+    if (this.endPause > 0) {
+      sequence.push({
+        frame: this.pause,
+        duration: this.endPause,
+        type: 'end-pause',
+        symbol: ''
+      });
+      position += this.endPause;
     }
 
     return { sequence, totalDuration: position };
@@ -218,7 +233,7 @@ class Skedaddle {
   }
 
   /**
-   * Create the morse kitty animation
+   * Create the morse animation
    */
   async create() {
     console.log('📡 SKEDADDLE ENCODER');
@@ -228,11 +243,14 @@ class Skedaddle {
     console.log('='.repeat(60) + '\n');
 
     // Check frames exist
-    if (!fs.existsSync(this.frameA)) {
-      throw new Error(`Frame A not found: ${this.frameA}`);
+    if (!fs.existsSync(this.dit)) {
+      throw new Error(`Dit frame not found: ${this.dit}`);
     }
-    if (!fs.existsSync(this.frameB)) {
-      throw new Error(`Frame B not found: ${this.frameB}`);
+    if (!fs.existsSync(this.dah)) {
+      throw new Error(`Dah frame not found: ${this.dah}`);
+    }
+    if (!fs.existsSync(this.pause)) {
+      throw new Error(`Pause frame not found: ${this.pause}`);
     }
 
     // Generate sequence
@@ -355,7 +373,7 @@ class Skedaddle {
   }
 
   /**
-   * Decode morse from kitty video (theoretical - for documentation)
+   * Decode morse from video (theoretical - for documentation)
    */
   static decodeInstructions() {
     return `
@@ -398,14 +416,16 @@ function checkFfmpeg() {
   }
 }
 
-// CLI interface
+// CLI interface - handle both direct execution and npm bin symlinks
 const __filename = fileURLToPath(import.meta.url);
-if (process.argv[1] === __filename) {
+const isMainModule = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(__filename);
+
+if (isMainModule) {
 
   // Check for ffmpeg
   if (!checkFfmpeg()) {
     console.error('❌ Error: ffmpeg not found!');
-    console.error('\nPiccadilly requires ffmpeg to be installed.');
+    console.error('\nSkedaddle requires ffmpeg to be installed.');
     console.error('\nTo install ffmpeg:');
     console.error('  • Ubuntu/Debian: sudo apt install ffmpeg');
     console.error('  • Fedora: sudo dnf install ffmpeg');
@@ -419,9 +439,7 @@ if (process.argv[1] === __filename) {
   const args = process.argv.slice(2);
 
   const options = {
-    frameA: 'a.jpg',
-    frameB: 'b.jpg',
-    output: 'morse-kitty.avif',
+    output: 'morse.avif',
     text: 'MEOW',
     wpm: 15,
     format: 'avif',
@@ -443,10 +461,14 @@ if (process.argv[1] === __filename) {
       options.addAudio = true;
     } else if (args[i] === '--frequency' || args[i] === '-F') {
       options.toneFrequency = parseInt(args[++i]);
-    } else if (args[i] === '--frame-a' || args[i] === '-A') {
-      options.frameA = args[++i];
-    } else if (args[i] === '--frame-b' || args[i] === '-B') {
-      options.frameB = args[++i];
+    } else if (args[i] === '--dit' || args[i] === '-D') {
+      options.dit = args[++i];
+    } else if (args[i] === '--dah' || args[i] === '-H') {
+      options.dah = args[++i];
+    } else if (args[i] === '--pause' || args[i] === '-P') {
+      options.pause = args[++i];
+    } else if (args[i] === '--end-pause' || args[i] === '-E') {
+      options.endPause = parseFloat(args[++i]);
     } else if (args[i] === '--decode-help') {
       console.log(Skedaddle.decodeInstructions());
       process.exit(0);
@@ -459,17 +481,18 @@ Encodes text into International Morse Code using cat tongue animations.
 Perfect for hiding messages in plain sight, confusing grandpas with PTSD,
 and paying homage to the Commodore Amiga demo scene.
 
-Usage: node skedaddle [options]
+Usage: skedaddle [options]
 
 OPTIONS:
   -t, --text <message>       Message to encode (default: "MEOW")
   -w, --wpm <speed>          Words per minute (default: 15)
-  -o, --output <file>        Output filename (default: morse-kitty.avif)
+  -o, --output <file>        Output filename (default: morse.avif)
   -f, --format <fmt>         Output format: avif or mp4 (default: avif)
   -a, --audio                Add morse audio beep track
   -F, --frequency <hz>       Beep frequency in Hz (default: 800)
-  -A, --frame-a <file>       Frame A image (tongue out) (default: a.jpg)
-  -B, --frame-b <file>       Frame B image (normal) (default: b.jpg)
+  -D, --dit <file>           Dit image - short signal (default: ./samples/dit.jpg)
+  -H, --dah <file>           Dah image - long signal (default: ./samples/dah.jpg)
+  -P, --pause <file>         Pause image - space/pause (default: ./samples/pause.jpg)
 
   --decode-help              Show instructions for decoding
   -h, --help                 Show this help
@@ -477,19 +500,19 @@ OPTIONS:
 EXAMPLES:
 
   # Basic usage
-  node skedaddle --text "I HAS LICKS"
+  skedaddle --text "I HAS LICKS"
 
   # Faster transmission
-  node skedaddle --text "FEED YOUR KITTY" --wpm 25
+  skedaddle --text "FEED YOUR KITTY" --wpm 25
 
   # With audio beeps (so grandpa can hear it)
-  node skedaddle --text "SOS" --audio --format mp4
+  skedaddle --text "SOS" --audio --format mp4
 
   # Custom frames and frequency
-  node skedaddle -t "MEOW MEOW" -A tongue.jpg -B normal.jpg -F 1000
+  skedaddle -t "MEOW MEOW" -D dit.jpg -H dah.jpg -P pause.jpg -F 1000
 
   # Professional speed for experts
-  node skedaddle -t "THE QUICK BROWN FOX" -w 40 -o secret.mp4
+  skedaddle -t "THE QUICK BROWN FOX" -w 40 -o secret.mp4
 
 TIMING:
   At 15 WPM (standard):
